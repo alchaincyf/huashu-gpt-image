@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "scenario": "典型场景：公众号封面单图",
+    "prompt": "帮我做一张公众号封面，主题是 GLM-5V-Turbo 多模态发布",
+    "expected": "skill 应引导：选风格真名（如 Anthropic/Penguin Books）→ 写中文 ≤80 字 prompt → 跑 5 项自检 → 调用 gen_via_codex.py 输出 1410×600"
+  },
+  {
+    "id": 2,
+    "scenario": "典型场景：批量 icon 集",
+    "prompt": "给我做一套 4x4 的 AI 工具 icon 集",
+    "expected": "skill 应路由到批量章节 → 用 grid_icons 模板 → 强调禁画辅助元素/IP记忆唤起 → 跑 extract_grid.py 抠图 → contact_sheet.py 验证"
+  },
+  {
+    "id": 3,
+    "scenario": "歧义场景：AI 视频参考板",
+    "prompt": "做个 Sora 提示词的视频参考板",
+    "expected": "skill 应识别 AI 视频参考板任务 → 跳转 video-reference-board.md → 1920×1080 16:9 → 角色三视图+场景空间+分镜+机位综合"
+  }
+]

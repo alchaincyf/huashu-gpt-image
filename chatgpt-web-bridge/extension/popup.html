@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { font: 13px -apple-system, sans-serif; width: 260px; padding: 12px; }
+    h1 { font-size: 14px; margin: 0 0 8px; }
+    .row { margin: 6px 0; }
+    input { width: 100%; box-sizing: border-box; padding: 4px; }
+    #status { font-weight: 600; }
+    .ok { color: #0a7d28; } .bad { color: #c0392b; }
+    button { margin-top: 8px; padding: 4px 10px; }
+  </style>
+</head>
+<body>
+  <h1>ChatGPT 生图桥</h1>
+  <div class="row">桥地址：<input id="bridgeUrl" placeholder="http://127.0.0.1:8765" /></div>
+  <div class="row">状态：<span id="status">检查中…</span></div>
+  <button id="save">保存并重连</button>
+  <script src="popup.js"></script>
+</body>
+</html>

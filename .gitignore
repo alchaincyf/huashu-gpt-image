@@ -1,0 +1,13 @@
+# 测试产出的图片（根目录散落，SKILL.md 与 references 均未引用）
+/*.png
+# 编辑器备份
+*.bak
+*.bak.*
+.DS_Store
+__pycache__/
+*.pyc
+# 本地环境
+.env
+# 生成输出与临时目录
+/output/
+/tmp/
