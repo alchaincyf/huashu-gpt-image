@@ -25,6 +25,25 @@ gen_via_chatgpt_web.py  <----图片字节----  server.py  <--POST /result-------
 
 扩展跑在**你真实的、已登录的 Chrome** 里，所以反爬检测最低、不需要 API key、不按量计费。
 
+## 安全边界：为什么「只绑 127.0.0.1」不够
+
+`server.py` 只监听 `127.0.0.1`，这挡住了局域网里的别人，**挡不住你自己浏览器里打开的任意网页**——网页能对 `127.0.0.1` 发跨源请求。所以桥在应用层加了三道门：
+
+| 门 | 做什么 | 挡住什么 |
+|---|---|---|
+| Host 白名单 | 只接受 `127.0.0.1` / `localhost` / `::1` | DNS rebinding（攻击者域名解析到 127.0.0.1，Host 就露馅） |
+| Origin 白名单 | 只放行 `chrome-extension://` 和「没有 Origin」的本地 CLI，`http(s)://` 网页直接 403，且**从不回 `ACAO: *`** | 恶意页面读 `/poll` 偷走待处理任务——里面有 `--ref` 参考图的完整 base64 |
+| `X-Bridge-Client` 头 | `/submit` `/poll` `/result` 必带 | 网页的「简单请求」带不了自定义头；一加就必须先过预检，而预检卡在上一道门。这条同时堵住了「读不到响应但照样把任务从队列里抢走」的盲打 |
+
+另外两条：
+
+- **`/result` 绑 `resultToken`**：`/poll` 派任务时附一个一次性 token，回 `/result` 必须带对，否则 403。没有它，任何能猜到 `jobId` 的一方都能替你的任务交一份伪造结果，而 CLI 会把那些字节直接写进 `--out`。
+- **请求体上限** `BRIDGE_MAX_BODY`（默认 32 MiB）：超了返 413，不再照着 `Content-Length` 分配内存。
+
+`/health` 不要求自定义头，`curl http://127.0.0.1:8765/health` 照旧能用——它只返回在线状态和计数。
+
+> 门再多也只是**纵深**，不是隔离。桥开着就意味着本机上任何能执行代码的东西都能驱动你已登录的 ChatGPT 账号。**用完就把 `server.py` 关掉**，别常驻。
+
 ## 一次性安装（约 3 分钟）
 
 ### 1. 装扩展
@@ -79,6 +98,9 @@ python3 scripts/gen_via_chatgpt_web.py --batch jobs.jsonl --concurrency 2
 | 扩展点开 popup 显示「桥未启动」 | 同上；macOS 系统代理可能劫持 localhost → 系统代理设置里把 `127.0.0.1,localhost` 加进「忽略代理」 |
 | 等图超时 | chatgpt.com 改版导致选择器失效 → 见 `extension/content.js` 顶部 `SELECTORS`，对着真实 DOM 校准带 `❗TODO` 的项 |
 | 报「限流/上限」 | 网页版桶也到顶了，等恢复或回退 codex 路 |
+| 请求返 403 `missing X-Bridge-Client` | 自己写脚本调桥时漏了这个头（见上方「安全边界」），加 `-H 'X-Bridge-Client: my-script'` |
+| 请求返 403 `cross-origin denied` | 从网页/DevTools console 里调桥——这是**设计如此**，只有扩展和本地 CLI 能调 |
+| 扩展报 403 `bad or expired resultToken` | 扩展是旧版（`background.js` 还没回传 `resultToken`）→ 在 `chrome://extensions` 点一下「重新加载」 |
 
 ## ⚠️ 选择器维护
 

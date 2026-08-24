@@ -9,6 +9,9 @@
 //   3. content.js 用 runtime.sendMessage 回传结果，这个动作本身会唤醒被杀的 SW。
 
 const DEFAULT_BRIDGE = "http://127.0.0.1:8765";
+// 桥要求这个自定义头：网页发不出带自定义头的「简单请求」，所以这一行就把
+// 「任意网页偷 /poll 里的任务」这条路堵死了（详见 server.py 的「三道门」）。
+const CLIENT_HEADERS = { "X-Bridge-Client": "huashu-gpt-image-ext" };
 
 async function bridgeBase() {
   const { bridgeUrl } = await chrome.storage.local.get("bridgeUrl");
@@ -30,7 +33,7 @@ async function pollLoop() {
     const base = await bridgeBase();
     let resp;
     try {
-      resp = await fetch(base + "/poll", { method: "GET" });
+      resp = await fetch(base + "/poll", { method: "GET", headers: CLIENT_HEADERS });
     } catch (e) {
       // 桥没开，安静退出，等下次 alarm 再试
       polling = false;
@@ -101,9 +104,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 async function handleResult(msg) {
   const { jobId, ok, imageUrl, imageBase64, mime, error } = msg;
+  // resultToken 必须在清掉 activeJob 之前取出来，否则回 /result 会被桥 403
+  const resultToken = await tokenFor(jobId);
   try {
     if (!ok) {
-      await reportError(jobId, error || "content.js 报告失败");
+      await reportError(jobId, error || "content.js 报告失败", resultToken);
       return;
     }
     let b64 = imageBase64;
@@ -115,16 +120,22 @@ async function handleResult(msg) {
       b64 = await blobToBase64(blob);
     }
     if (!b64) {
-      await reportError(jobId, "没拿到图片字节");
+      await reportError(jobId, "没拿到图片字节", resultToken);
       return;
     }
-    await postResult({ jobId, ok: true, imageBase64: b64, mime: m });
+    await postResult({ jobId, resultToken, ok: true, imageBase64: b64, mime: m });
   } catch (e) {
-    await reportError(jobId, "取图片字节失败: " + String(e));
+    await reportError(jobId, "取图片字节失败: " + String(e), resultToken);
   } finally {
     await chrome.storage.session.remove("activeJob");
     setTimeout(() => pollLoop(), 50);
   }
+}
+
+// 当前任务的 resultToken（存在 storage.session 的 activeJob 里，随任务一起从 /poll 拿到）
+async function tokenFor(jobId) {
+  const { activeJob } = await chrome.storage.session.get("activeJob");
+  return activeJob && activeJob.jobId === jobId ? activeJob.resultToken : undefined;
 }
 
 function blobToBase64(blob) {
@@ -141,15 +152,16 @@ async function postResult(payload) {
   try {
     await fetch(base + "/result", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...CLIENT_HEADERS },
       body: JSON.stringify(payload),
     });
   } catch (e) { /* 桥可能已关，忽略 */ }
 }
 
-async function reportError(jobId, error) {
+async function reportError(jobId, error, resultToken) {
+  const token = resultToken ?? (await tokenFor(jobId));
   await chrome.storage.session.remove("activeJob");
-  await postResult({ jobId, ok: false, error });
+  await postResult({ jobId, resultToken: token, ok: false, error });
   setTimeout(() => pollLoop(), 50);
 }
 

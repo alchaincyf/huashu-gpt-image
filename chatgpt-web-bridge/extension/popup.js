@@ -10,7 +10,7 @@ async function check() {
   const base = (document.getElementById("bridgeUrl").value || DEFAULT_BRIDGE).replace(/\/+$/, "");
   const el = document.getElementById("status");
   try {
-    const r = await fetch(base + "/health");
+    const r = await fetch(base + "/health", { headers: { "X-Bridge-Client": "huashu-gpt-image-ext" } });
     const j = await r.json();
     el.textContent = "桥在线 ✓ (pending " + j.pending + ")";
     el.className = "ok";
