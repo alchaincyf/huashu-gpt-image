@@ -11,3 +11,4 @@ __pycache__/
 # 生成输出与临时目录
 /output/
 /tmp/
+.last-update-check
