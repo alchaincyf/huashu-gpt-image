@@ -46,6 +46,8 @@ async function pollLoop() {
       return;
     }
     if (!resp.ok) {
+      // 静默 return 会让「桥被 403 挡住」完全没有现场：popup 显示在线，生图全部超时。
+      console.warn("[bridge] /poll 被拒:", resp.status, "— 若刚升级过 server.py，去 chrome://extensions 重载本扩展");
       polling = false;
       return;
     }

@@ -101,6 +101,7 @@ python3 scripts/gen_via_chatgpt_web.py --batch jobs.jsonl --concurrency 2
 | 请求返 403 `missing X-Bridge-Client` | 自己写脚本调桥时漏了这个头（见上方「安全边界」），加 `-H 'X-Bridge-Client: my-script'` |
 | 请求返 403 `cross-origin denied` | 从网页/DevTools console 里调桥——这是**设计如此**，只有扩展和本地 CLI 能调 |
 | 扩展报 403 `bad or expired resultToken` | 扩展是旧版（`background.js` 还没回传 `resultToken`）→ 在 `chrome://extensions` 点一下「重新加载」 |
+| **popup 显示「桥在线 ✓」，但每次生图都 504** | 升级了 `server.py` 却没重载扩展：旧扩展的 `/poll` 全被 403，而 `/health` 豁免那道门照样通。→ `chrome://extensions` 重载扩展。现在 popup 会直接把这句写出来（「桥在线，但扩展被拒」），`/health` 也返回 `lastPollRejected` |
 
 ## ⚠️ 选择器维护
 

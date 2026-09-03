@@ -64,6 +64,10 @@ _events: dict[str, threading.Event] = {}
 _job_tokens: dict[str, str] = {}  # jobId -> resultToken，只有取到活的那一方才知道，用来绑定 /result
 _lock = threading.Lock()
 _last_poll_ts = [0.0]  # 扩展最近一次来取活的时间，用于 /health 判断扩展是否在线
+# 扩展最近一次 /poll 被三道门挡下的时间与原因。升级了 server.py 却没重载扩展时，
+# 旧扩展带不上 X-Bridge-Client，每次 /poll 都被 403 —— 而 /health 照样通。
+# 不记这一笔，popup 会一直显示「在线」，用户只看到生图全部 504，没有任何线索。
+_last_poll_reject = [0.0, ""]
 
 
 def _now() -> float:
@@ -180,10 +184,21 @@ class Handler(BaseHTTPRequestHandler):
                 "pending": _jobs_pending.qsize(),
                 "dailyUsed": used,
                 "dailyCap": cap,
+                "lastPollRejected": (
+                    {"ago": round(_now() - _last_poll_reject[0], 1), "reason": _last_poll_reject[1]}
+                    if _last_poll_reject[0] and (_now() - _last_poll_reject[0]) < 120
+                    else None
+                ),
             })
             return
         if self.path.startswith("/poll"):
             if not self._guard():
+                _last_poll_reject[0] = _now()
+                _last_poll_reject[1] = (
+                    "缺 X-Bridge-Client 请求头——扩展是旧版，去 chrome://extensions 重载"
+                    if not self.headers.get(CLIENT_HEADER)
+                    else "来源或 Host 未通过校验"
+                )
                 return
             _last_poll_ts[0] = _now()
             job = self._next_live_job(_now() + POLL_HOLD)
@@ -285,7 +300,9 @@ class Handler(BaseHTTPRequestHandler):
         token = str(data.get("resultToken") or "")
         with _lock:
             expected = _job_tokens.get(job_id)
-        if not expected or not hmac.compare_digest(token, expected):
+        # compare_digest 遇到非 ASCII 的 str 会抛 TypeError（不是返回 False），
+        # 那会让这条防伪造路径本身变成可崩点。两边都编码成 bytes 再比。
+        if not expected or not hmac.compare_digest(token.encode("utf-8"), expected.encode("utf-8")):
             self._send(403, {"error": "bad or expired resultToken"})
             return
         with _lock:
