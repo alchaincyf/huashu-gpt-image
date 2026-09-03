@@ -46,7 +46,8 @@ def _eprint(*a):
 def _http(method: str, path: str, payload: dict | None = None, timeout: int = 320) -> tuple[int, dict]:
     url = BRIDGE + path
     data = None
-    headers = {}
+    # 桥要求这个自定义头，用来区分「本地客户端」和「浏览器里的任意网页」（见 server.py 三道门）
+    headers = {"X-Bridge-Client": "huashu-gpt-image-cli"}
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
