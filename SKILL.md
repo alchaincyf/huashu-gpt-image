@@ -187,12 +187,19 @@ Anthropic 风格的编辑插画封面：一只手从右下伸入，食指点向�
 
 | 家族 | 什么时候用 | 风格 ref 垫图 |
 |---|---|---|
-| **米白手绘editorial（⭐主力）** | 知识解读/方法论/产品评测/个人观点 | `配图/风格参考/精选/03-米白手绘editorial/` 挑1张 |
+| **米白手绘editorial（⭐主力）** | 知识解读/方法论/产品评测/个人观点 | ⚠️ 实际落在 `精选/00-待你确认/`（不是索引里写的 `03-…`），挑1张。同类优先：文件名带 `darwin-skill-v2方法论` / `md生产html消费` 的就是自造物+方法论那批 |
 | **superflat多彩庆典（王牌）** | 重磅发布/X.0升级/里程碑，能量拉满 | `配图/风格参考/大字报-时代广场-HuashuDesign2.0.png` |
-| 高能量大字报 | 热点速评/发布快讯/戏剧化判断 | `精选/02-高能量大字报/`，或饱和底靠 prompt |
+| 高能量大字报 | 热点速评/发布快讯/戏剧化判断 | `精选/02-高能量大字报/`。⛔ **底色不许用正红/橙红满底**（2026-09-01 花叔判「很丑，我不喜欢」，此前该族 7 张有一半是红底，已作废）。要走这族就换暖黄、米白配巨字、深炭灰这类底色 |
 | 多彩插画叙事 | 有画面感的故事/产品拟人化 | 主题角色/产品官方图 + prompt 写厚涂/3D 高饱和 |
 | Anthropic橙锚定 | Claude/Anthropic 生态 | prompt 写赤陶橙底 |
-| 像素IP | 工具/技巧/复古梗等**轻量**主题 | `_archive/像素品牌资产.png` + `精选/04-像素IP/` |
+| 像素IP | 工具/技巧/复古梗等**轻量**主题 | `_archive/像素品牌资产.png` + `精选/02-像素风/`（不是 `04-…`）|
+
+> 🔴 **目录名与索引编号对不上，别照索引的编号去找。** `风格参考索引.md` 讲的是六大家族
+> （01 superflat / 02 高能量大字报 / 03 米白手绘editorial / 04 像素IP / 05 多彩插画叙事 /
+> 06 Anthropic橙），但 `精选/` 下实际只落了四个目录，且编号另起：
+> `00-待你确认`（= 米白手绘 editorial 主力款那批）、`01-superflat多彩庆典`、
+> `02-像素风`、`03-Anthropic风`。**先 `ls 精选/` 看实际有什么，再按家族语义挑**，
+> 不要按索引的编号拼路径（2026-09-03 实测踩空一次）。
 
 **像素风只是 6 家族里的 1 个（轻量梗才用），不是默认。** 定不了家族先读索引的「六大家族速查」。主角 ref 多数家族用 `配图/品牌资产/花叔头像-superflat三视图.png`（superflat 卡通男孩），像素家族才用 `_archive/像素品牌资产.png`。
 
@@ -226,6 +233,9 @@ JSONL batch 的 `ref` 字段支持数组，同理传主角+logo+风格三张。
   ```
   JSONL batch 同理：`"ref": ["…/花叔头像-superflat三视图.png", "…/品牌Logo库/OpenAI/ChatGPT.png", "…/风格参考/<家族>.png"]`（ref 字段支持数组）。
 - 为什么：产品 logo 是该品牌**最强的视觉锚点**，喂真图比让模型凭记忆画 logo 准得多（同红线 3 的「ref > prompt 真名」逻辑）。否则模型常把 logo 画错形、画错色，或把品牌名当 nameplate 写英文。
+- 🔴 **logo 一律直接投喂给模型，禁止「画面留白卡位 + 后期脚本拼贴」**（2026-09-01 花叔定）。prompt 里把「不许改」写死：`把这枚<品牌>标识原样放进画面<位置>，形状、颜色渐变、元素间距比例、字标字形全部与参考图一致，不要重新设计、不要换配色、不要加描边或阴影，只做等比缩放`。后期拼贴看着永远像贴上去的，而且每换一版主视觉就要重新量一次坐标——投喂让模型把 logo 融进光影和透视里。
+- ⚠️ 带 alpha 的 logo（多数官方 PNG/带透明的 JPG）**不要 `convert('RGB')`**，那会把透明区压成黑底，喂进去就是一块黑方块。用 `convert('RGBA')`。
+- 🔴 **中文字标必须在 prompt 里写死那几个汉字**（2026-09-01 实测）。喂了带「豆包工作」四个汉字的官方 logo，模型照样按自己记忆把字标重排成 `Doubao Work`——它把 ref 当品牌提示而不是临摹对象。红线 1 那句「图中所有文字必须是中文」拦不住，模型会把 logo 当成豁免项。写法：`字标必须是「豆包工作」这四个汉字，严禁写成 Doubao Work 或任何拼音、英文、缩写`。凡是中文品牌（豆包/扣子/千问/智谱/秘塔…）都要带这一句。
 - 库里**没有**该产品 → 不要硬让模型瞎画 logo，退回纯品牌资产 ref + prompt 描述；如果是高频品牌可顺手补进库（见库 README 的来源优先级）。
 - 库的目录速查、缺哪些、同图共用（如 GLM=智谱、SkyClaw=天工）见库内 `README.md`。
 
@@ -391,11 +401,11 @@ python3 scripts/gen_via_codex.py \
 
 ### 批量并发（多张独立图）
 
-写一个 JSONL，每行一个 job，并发跑（默认 3，订阅额度别开太高）：
+写一个 JSONL，每行一个 job，**串行跑**（默认 `--concurrency 1`，别调高，理由见下）：
 
 ```bash
 # jobs.jsonl：{"prompt":"...","out":"配图/a.png","size":"1410x600","quality":"high"}
-python3 scripts/gen_via_codex.py --batch jobs.jsonl --concurrency 3
+python3 scripts/gen_via_codex.py --batch jobs.jsonl
 ```
 
 失败的 job 打到 stderr 不中断其余；脚本自动校验尺寸、agent 没搬图时从 `~/.codex/generated_images/` 兜底搬运。
@@ -411,7 +421,7 @@ python3 scripts/gen_via_codex.py --batch jobs.jsonl --concurrency 3
 | 计费 | codex 订阅额度，0 API 费 | ChatGPT **网页版**订阅额度，0 API 费 | 按量计费，需 `OPENAI_API_KEY` |
 | 额度桶 | codex 桶——**较紧**，用几次易 429 | 网页版桶——Plus/Pro **宽得多**（独立于 codex 桶）| 看钱包 |
 | 参数控制 | 尺寸/quality 靠自然语言传给 agent | 同左（拼进 prompt，不保证精确尺寸）| 精确 `--size/--quality/--n/--background` |
-| 批量 | 多进程并发（建议 ≤3） | 浏览器侧**串行**（慢，但能跑）| `generate-batch`，并发 5-25 |
+| 批量 | **串行**（并发会串图，见下）| 浏览器侧**串行**（慢，但能跑）| `generate-batch`，并发 5-25 |
 | 透明背景 | 不稳 | 不稳 | `--model gpt-image-1.5 --background transparent` |
 | 前置 | `codex login` | 装 Chrome 扩展 + 跑本地桥 + chatgpt.com 已登录（见 `chatgpt-web-bridge/README.md`）| `OPENAI_API_KEY` |
 | 适合 | 边写代码边出图、日常配图、省钱 | **codex 桶 429/耗尽**时续命 | 大批量（>20张）、要精确参数/透明底 |
@@ -422,7 +432,7 @@ python3 scripts/gen_via_codex.py --batch jobs.jsonl --concurrency 3
 
 - ✅ 非标比例精确：1410×600 / 1024×1024 / 512×512 全部精确命中
 - ✅ 中文大字准确：「AI 编程」等中文渲染完美
-- ✅ 单图耗时 ~60-130s；并发 2 张墙钟 ~93s（比串行省 ~40%）
+- ✅ 单图耗时 ~60-130s（1410×600 + quality high 这档实测 150-165s）。⛔ **并发 2 张墙钟 ~93s、比串行省 ~40% 这个旧数据不要再用了**——省下的 40% 是拿串图风险换的，2026-06-18 实测两张输出 md5 相同
 - ✅ agent 生成后自动 `sips` 后处理到请求尺寸
 - ⚠️ `codex exec -i` 是变长参数会吞 prompt——脚本已用 stdin 传 prompt 规避，手搓命令时注意
 
@@ -465,11 +475,12 @@ python3 scripts/gen_via_codex.py --batch jobs.jsonl --concurrency 3
 
 | 失败现象 | 触发条件 | 一线修复 | 仍失败兜底 |
 |---|---|---|---|
+| **codex 报「MCP tool call requires approval, but approval policy is never」** | 这不是额度问题，是 codex 会话的审批策略禁用了内置 imagegen；日志里常同时出现 `KEY_MISSING` | 直接切网页版路径 `gen_via_chatgpt_web.py`（先 `--health`）；或在有审批权限的 codex 会话里重跑 | 走 Lovart 链路（`lovart-api` skill），它是独立通道 |
 | 订阅路径 429 / 额度耗尽 | `gen_via_codex.py` 报 quota 类错误 | **切网页版路径** `python3 scripts/gen_via_chatgpt_web.py --prompt ... --out ...`（吃网页版那个更宽的额度桶，0 API 费；前置见 `chatgpt-web-bridge/README.md`，先 `--health` 确认桥+扩展在线）| 网页版桶也满 → 切 API 路径 `image_gen.py`（需 `OPENAI_API_KEY`），或等 N 分钟 |
 | 订阅路径产图但没搬到 `--out` | agent 生成完图但路径不对 | 脚本会自动从 `~/.codex/generated_images/` 兜底搬运 | 手动 `cp ~/.codex/generated_images/<最新文件> <out_path>` |
 | 透明背景不稳 | 订阅路径无法精确控背景 | 切 API 路径 `--model gpt-image-1.5 --background transparent` | 后处理：`magick input.png -fuzz 5% -transparent white output.png` |
 | **无 API key 做透明 PNG**（`.env` 里 `OPENAI_API_KEY` 是占位符 `your_..._here`，API 路径走不通）| API 路径不可用 + 订阅路径透明不稳 | **纯色幕布 + 抠图**：订阅路径在主体配色里**不存在**的纯平涂色上生成（萌系白橙绿角色用湖蓝 `#2E7BE4`，prompt 写「纯平涂湖蓝背景#2E7BE4，无渐变无阴影，留边距」），再跑 `python3 scripts/chroma_key.py in.png out.png`（全局色距抠图，能清掉钳/臂夹缝里的封闭色块 + alpha 内缩去彩色毛边）| 角色一致性：先抠一张干净 master，再用 master 当 `--ref` 生其它姿态（实测一致性强）|
-| 大批量（>20张）并发不够 | 订阅路径 `--concurrency 3` 太慢 | 切 API 路径 `generate-batch` 子命令，并发 5-25 | 拆批分多次跑，每批 ≤20 |
+| 大批量（>20张）嫌慢 | 订阅路径只能串行（并发串图）| 切 API 路径 `generate-batch` 子命令，并发 5-25（但按量计费）| 拆批分多次跑，每批 ≤20，或第二条线走 Lovart |
 | 尺寸非标导致后处理失真 | 1410×600 这种非标比例 | 脚本已自动 `sips` 后处理 | 手动用 `magick` 重新插值（`-filter Lanczos`）|
 
 **原则**：先一线修复（成本低、不切路径），再 fallback（换工具/换路径）。每个 fallback 都要在 results / log 里记一笔，下次同样错误直接走 fallback。

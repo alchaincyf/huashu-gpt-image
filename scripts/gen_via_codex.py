@@ -23,10 +23,23 @@ huashu-gpt-image 负责把 prompt 写到 9.5 分，这个脚本负责把图真�
       --out 配图/封面.png --size 1600x900 --quality high \
       --ref _archive/像素品牌资产.png --ref "04-写作参考/品牌Logo库/OpenAI/ChatGPT.png"
 
-  # 批量并发（JSONL，每行一个 job：{"prompt":..., "out":..., "size":..., "quality":...}）
-  python gen_via_codex.py --batch jobs.jsonl --concurrency 3
+  # 批量（JSONL，每行一个 job：{"prompt":..., "out":..., "size":..., "quality":...}）
+  # ⚠️ 默认串行，别加 --concurrency：并发会串图，原因见下面「已知限制」
+  python gen_via_codex.py --batch jobs.jsonl
 
 退出码：0 全部成功 / 1 有失败。失败的 job 会打印到 stderr，不中断其余。
+
+已知限制（两条，踩过才知道）：
+  1. 不能并发。codex 不一定把图写到 --out，兜底逻辑是给共享目录 ~/.codex/generated_images
+     拍快照、跑完求差集取最新那张。并发时多个任务的产物混在同一个差集里，会互相抢，
+     输出串图（2026-06-18 实测：背靠背跑两张，md5 完全相同）。所以默认 --concurrency 1。
+  2. 打了 ✅ 不等于图是模型画的。本脚本只检查 --out 文件存不存在。codex 拿不到生图能力时
+     （$imagegen 不可用、或转去调需审批的 MCP 而 exec 审批策略是 never），它会自己用
+     SVG + ImageMagick 把图「拼」出来写到那个路径，脚本照样打 ✅（2026-09-03 实测，5 张全假）。
+     验真看三个正面证据：~/.codex/generated_images 有没有新增文件；
+     python3 -c "from PIL import Image; print(Image.open('图.png').info)" 是不是空 {}
+     （ImageMagick 拼的会有 date:create 一串，别用 identify -verbose，那对真图也会现算一个出来）；
+     工作目录有没有留下 *.svg / {paper,depth,base}.png 这类中间件。
 """
 from __future__ import annotations
 
@@ -172,7 +185,10 @@ def main() -> int:
                     help="参考图路径（图生图）。可多次传入叠加多张参考图，"
                          "如 --ref 像素品牌资产.png --ref 品牌Logo库/OpenAI/ChatGPT.svg")
     ap.add_argument("--batch", help="JSONL 文件，每行一个 job")
-    ap.add_argument("--concurrency", type=int, default=3, help="批量并发数（默认3，订阅额度勿过高）")
+    ap.add_argument("--concurrency", type=int, default=1,
+                    help="批量并发数（默认1=串行）。⚠️ 别调高：兜底逻辑靠共享目录 "
+                         "~/.codex/generated_images 的快照差集找图，并发时多个任务会抢到同一张最新 png，"
+                         "输出串图（2026-06-18 实测两张 md5 相同）")
     args = ap.parse_args()
 
     # 前置：确认 codex 在
